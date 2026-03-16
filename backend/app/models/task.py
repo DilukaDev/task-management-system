@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
 
 class TaskBase(BaseModel):
@@ -10,9 +10,8 @@ class TaskCreate(TaskBase):
     pass
 
 class Task(TaskBase):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     is_completed: bool = False
     created_at: datetime
-    
-    class Config:
-        from_attributes = True
