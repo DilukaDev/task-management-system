@@ -1,0 +1,63 @@
+services:
+  # PostgreSQL Database
+  database:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      # Environment variables for PostgreSQL initialization
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      # Expose PostgreSQL on port 5432
+      - "5432:5432"
+    volumes:
+      # Persist database data using named volume
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # Check if database is ready before backend starts
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      # Expose backend API on port 8000
+      - "8000:8000"
+    environment:
+      # Database connection configuration
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_PORT: 5432
+      DB_HOST: database
+    depends_on:
+      # Wait for database to be healthy before starting backend
+      database:
+        condition: service_healthy
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      # Expose Vite dev server on port 5173
+      - "5173:5173"
+    environment:
+      # Backend API URL for frontend
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL}
+    depends_on:
+      # Wait for backend to be ready
+      - backend
+
+# Named volume for PostgreSQL persistent storage
+volumes:
+  postgres_data:
